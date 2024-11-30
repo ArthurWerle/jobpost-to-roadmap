@@ -3,7 +3,7 @@ import { extractJobDescription } from '@/app/utils/extractJobDescription'
 import { extractLinkedInJobUrl } from '@/app/utils/extractJobUrl'
 import { robustFetch } from '@/app/utils/robustFetch'
 
-export const dynamic = 'force-dynamic'
+export const runtime = 'edge'
 
 export async function GET(request: NextRequest) {
   const jobUrl = request.nextUrl.searchParams.get('jobUrl')
