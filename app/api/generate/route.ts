@@ -1,3 +1,5 @@
+export const maxDuration = 120
+
 import { OpenAIStream, OpenAIStreamPayload } from "../../utils/gptStream"
 import { robustFetch } from "../../utils/robustFetch"
 import * as cheerio from 'cheerio'
