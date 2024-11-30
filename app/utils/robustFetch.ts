@@ -11,7 +11,7 @@ function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export async function robustFetch(url: string, maxRetries = 5): Promise<Response> {
+export async function robustFetch(url: string, maxRetries = 8): Promise<Response> {
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
