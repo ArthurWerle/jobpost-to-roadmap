@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 import StudyRoadmapGenerator from '../components/StudyRoadmapGenerator'
 import { GraduationCap } from 'lucide-react'

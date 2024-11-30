@@ -1,8 +1,6 @@
 export const maxDuration = 120
 
 import { OpenAIStream, OpenAIStreamPayload } from "../../utils/gptStream"
-import { robustFetch } from "../../utils/robustFetch"
-import * as cheerio from 'cheerio'
 
 if (!process.env.OPENAI_API_KEY) {
   throw new Error("Missing env var from OpenAI")
@@ -11,31 +9,16 @@ if (!process.env.OPENAI_API_KEY) {
 export const runtime = "edge"
 
 export async function POST(req: Request): Promise<Response> {
-  const { jobPostUrl, existingKnowledge } = (await req.json()) as {
-    jobPostUrl?: string;
+  const { jobDescription, existingKnowledge } = (await req.json()) as {
+    jobDescription?: string;
     existingKnowledge?: string
   };
 
-  if (!jobPostUrl) {
-    return new Response("Missing jobUrl", { status: 400 });
-  }
-
-  let jobDescription: string | null = null;
-  let fetchError: Error | null = null;
-
-  try {
-    const response = await robustFetch(jobPostUrl);
-    const html = await response.text();
-    jobDescription = extractJobDescription(html);
-  } catch (error) {
-    console.error('Error fetching job post:', error);
-    fetchError = error instanceof Error ? error : new Error(String(error));
-  }
-
   if (!jobDescription) {
-    console.log('Failed to extract job description. Attempting to generate a roadmap without it.');
-    jobDescription = 'Unable to fetch specific job description. Please provide a general roadmap for the job title.';
+    return new Response("Missing job description", { status: 400 });
   }
+
+  let fetchError: Error | null = null;
 
   const payload: OpenAIStreamPayload = {
     model: "gpt-3.5-turbo",
@@ -102,27 +85,5 @@ Use proper markdown formatting with headers (##), bold (**), lists (-)`
       })
     }
   );
-}
-
-// export default handler
-
-function extractJobDescription(html: string): string | null {
-  const $ = cheerio.load(html)
-  
-  const selectors = [
-    '.show-more-less-html__markup',
-    '.job-description',
-    '#job-details',
-    '.description__text'
-  ]
-
-  for (const selector of selectors) {
-    const description = $(selector).text().trim()
-    if (description) {
-      return description
-    }
-  }
-
-  return null
 }
 

@@ -15,6 +15,7 @@ import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import {
   createParser,
 } from "eventsource-parser"
+import { useJobDescriptionStream } from '@/hooks/useJobDescription'
 
 export default function StudyRoadmapGenerator() {
   const [jobPostUrl, setJobPostUrl] = useState('')
@@ -24,6 +25,8 @@ export default function StudyRoadmapGenerator() {
   const [error, setError] = useState<string | null>(null)
   const [isValidUrl, setIsValidUrl] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
+
+  const { statusMessages, jobDescription, isLoading: isJobDescriptionLoading, error: streamError } = useJobDescriptionStream(jobPostUrl)
 
   useEffect(() => {
     const isValid = /^https:\/\/(www\.)?linkedin\.com\/jobs\/view\/.+$/.test(jobPostUrl)
@@ -50,19 +53,17 @@ export default function StudyRoadmapGenerator() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          jobPostUrl,
+          jobDescription,
           existingKnowledge
         }),
       })
 
-      console.log({ response })
       if (!response.ok) {
         throw new Error(response.statusText)
       }
 
       const data = response.body
 
-      console.log({ data })
       if (!data) {
         return
       }
@@ -72,7 +73,6 @@ export default function StudyRoadmapGenerator() {
           const data = event.data
           try {
             const text = JSON.parse(data).text ?? ""
-            console.log({ text })
             setRoadmap((prev) => prev + text)
           } catch (e) {
             console.error(e)
@@ -88,7 +88,6 @@ export default function StudyRoadmapGenerator() {
         const { value, done: doneReading } = await reader.read()
         done = doneReading
         const chunkValue = decoder.decode(value)
-        console.log({ chunkValue })
         parser.feed(chunkValue)
       }
     } catch (error) {
@@ -103,6 +102,28 @@ export default function StudyRoadmapGenerator() {
     navigator.clipboard.writeText(roadmap)
     setIsCopied(true)
     setTimeout(() => setIsCopied(false), 2000)
+  }
+
+  const renderButtonContent = () => {
+    if (isJobDescriptionLoading) {
+      return (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Trying to fetch job description from linkedin (this may take awhile)...
+        </>
+      )
+    }
+
+    if (isLoading) {
+      return (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Generating Roadmap...
+        </> 
+      )
+    }
+
+    return 'Generate Study Roadmap'
   }
 
   return (
@@ -124,15 +145,34 @@ export default function StudyRoadmapGenerator() {
                 value={jobPostUrl}
                 onChange={(e) => setJobPostUrl(e.target.value)}
                 required
+                disabled={isJobDescriptionLoading}
                 placeholder="https://www.linkedin.com/jobs/view/..."
                 className={cn(
                   "pl-10",
                   !isValidUrl && jobPostUrl && "border-red-500 focus-visible:ring-red-500"
                 )}
               />
-              <LinkIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+              {isJobDescriptionLoading ? (
+                <Loader2 className="absolute left-3 top-2.5 h-5 w-5  animate-spin" />) : 
+                (<LinkIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />)}
             </div>
           </div>
+
+          <AnimatePresence mode="wait">
+            <div className='text-[12px]'>
+              {statusMessages.map((message, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {message}
+                </motion.div>
+              ))}
+            </div>
+          </AnimatePresence>
 
           <div className="space-y-2">
             <label htmlFor="existingKnowledge" className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -149,17 +189,10 @@ export default function StudyRoadmapGenerator() {
 
           <Button
             type="submit"
-            disabled={isLoading || !isValidUrl}
+            disabled={isJobDescriptionLoading || isLoading || !isValidUrl}
             className="w-full sm:w-auto"
           >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generating Roadmap...
-              </>
-            ) : (
-              'Generate Study Roadmap'
-            )}
+            {renderButtonContent()}
           </Button>
         </form>
       </motion.div>
