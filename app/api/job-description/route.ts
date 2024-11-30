@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
         // Periodic heartbeat to prevent timeout
         const heartbeatInterval = setInterval(() => {
           writeToStream(`STATUS: Still processing...`)
-        }, 3000)
+        }, 2000)
 
         try {
           writeToStream(`STATUS: Extracting job details...`)
