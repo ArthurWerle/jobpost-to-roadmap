@@ -16,19 +16,10 @@ export async function GET(request: NextRequest) {
   const writer = writable.getWriter()
   const encoder = new TextEncoder()
 
-  const statusMessages = [
-    'Trying to fetch job description...',
-    'Extracting job details...',
-    'Processing job description...',
-    'Job description successfully retrieved'
-  ]
-
   async function streamJobDescription() {
     try {
       // Stream status messages
-      for (const message of statusMessages) {
-        await writer.write(encoder.encode(`STATUS: ${message}\n`))
-      }
+      await writer.write(encoder.encode(`STATUS: Trying to fetch job description...\n`))
 
       const extractedUrl = extractLinkedInJobUrl(jobUrl as string)
       
@@ -38,14 +29,17 @@ export async function GET(request: NextRequest) {
         return
       }
 
+      await writer.write(encoder.encode(`STATUS: Extracting job details...\n`))
       const response = await robustFetch(extractedUrl)
       const html = await response.text()
 
       console.log({ html })
       // Extract job description
+      await writer.write(encoder.encode(`STATUS: Processing job description...\n`))
       const jobDescription = extractJobDescription(html)
       console.log({ jobDescription })
 
+      await writer.write(encoder.encode(`STATUS: Job description successfully retrieved...\n`))
       // Stream job description
       await writer.write(encoder.encode(`DESCRIPTION: ${jobDescription}\n`))
       
