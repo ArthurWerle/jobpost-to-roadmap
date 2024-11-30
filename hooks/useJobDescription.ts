@@ -36,6 +36,7 @@ export function useJobDescriptionStream(jobUrl: string) {
           const chunk = decoder.decode(value)
           const lines = chunk.trim().split('\n')
           
+          console.log({ lines })
           lines.forEach(line => {
             if (line.startsWith('STATUS: ')) {
               messages.push(line.replace('STATUS: ', ''))

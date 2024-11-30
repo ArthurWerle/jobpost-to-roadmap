@@ -28,6 +28,8 @@ export default function StudyRoadmapGenerator() {
 
   const { statusMessages, jobDescription, isLoading: isJobDescriptionLoading, error: streamError } = useJobDescriptionStream(jobPostUrl)
 
+  console.log({ streamError, statusMessages, jobDescription })
+
   useEffect(() => {
     const isValid = /^https:\/\/(www\.)?linkedin\.com\/jobs\/view\/.+$/.test(jobPostUrl)
     setIsValidUrl(isValid)
@@ -105,7 +107,7 @@ export default function StudyRoadmapGenerator() {
   }
 
   const renderButtonContent = () => {
-    if (isJobDescriptionLoading) {
+    if (isJobDescriptionLoading || !jobDescription) {
       return (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -189,7 +191,7 @@ export default function StudyRoadmapGenerator() {
 
           <Button
             type="submit"
-            disabled={isJobDescriptionLoading || isLoading || !isValidUrl}
+            disabled={isJobDescriptionLoading || isLoading || !isValidUrl || !jobDescription}
             className="w-full sm:w-auto"
           >
             {renderButtonContent()}
