@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-      <div className="container px-4 py-12 md:py-16">
+      <div className="container m-auto px-4 py-12 md:py-16">
         <div className="flex justify-center mb-8">
           <Button
             variant="link"
