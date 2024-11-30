@@ -11,64 +11,59 @@ export async function GET(request: NextRequest) {
   if (!jobUrl) {
     return new Response('Missing job URL', { status: 400 })
   }
-
-  const { readable, writable } = new TransformStream()
-  const writer = writable.getWriter()
-  const encoder = new TextEncoder()
-
-  async function streamJobDescription() {
-    try {
-      const writer = writable.getWriter()
+  const stream = new ReadableStream({
+    async start(controller) {
       const encoder = new TextEncoder()
-  
-      // Heartbeat mechanism
-      const heartbeatInterval = setInterval(async () => {
-        try {
-          await writer.write(encoder.encode(`STATUS: Still processing...\n`))
-        } catch (heartbeatError) {
-          clearInterval(heartbeatInterval)
-        }
-      }, 3000); // Send a heartbeat every 3 seconds
-  
+
+      // Helper function to safely write to the stream
+      const writeToStream = (message: string) => {
+        controller.enqueue(encoder.encode(message + '\n'))
+      }
+
       try {
         // Stream status messages
-        await writer.write(encoder.encode(`STATUS: Trying to fetch job description...\n`))
+        writeToStream(`STATUS: Trying to fetch job description...`)
+        
         const extractedUrl = extractLinkedInJobUrl(jobUrl as string)
         
         if (!extractedUrl) {
-          await writer.write(encoder.encode('ERROR: Invalid job URL\n'))
+          writeToStream('ERROR: Invalid job URL')
+          controller.close()
           return
         }
-  
-        await writer.write(encoder.encode(`STATUS: Extracting job details...\n`))
+
+        // Periodic heartbeat to prevent timeout
+        const heartbeatInterval = setInterval(() => {
+          writeToStream(`STATUS: Still processing...`)
+        }, 3000)
+
+        try {
+          writeToStream(`STATUS: Extracting job details...`)
+          
+          const response = await robustFetch(extractedUrl)
+          const html = await response.text()
+          
+          writeToStream(`STATUS: Processing job description...`)
+          const jobDescription = extractJobDescription(html)
+          
+          writeToStream(`STATUS: Job description successfully retrieved...`)
+          writeToStream(`DESCRIPTION: ${jobDescription}`)
+        } finally {
+          clearInterval(heartbeatInterval)
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error 
+          ? error.message 
+          : 'An unknown error occurred'
         
-        // Increase timeout for robustFetch
-        const response = await robustFetch(extractedUrl)
-        
-        const html = await response.text()
-        
-        await writer.write(encoder.encode(`STATUS: Processing job description...\n`))
-        const jobDescription = extractJobDescription(html)
-        
-        await writer.write(encoder.encode(`STATUS: Job description successfully retrieved...\n`))
-        await writer.write(encoder.encode(`DESCRIPTION: ${jobDescription}\n`))
+        writeToStream(`ERROR: ${errorMessage}`)
       } finally {
-        clearInterval(heartbeatInterval)
-        await writer.close()
+        controller.close()
       }
-    } catch (error) {
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : 'An unknown error occurred'
-      
-      await writer.write(encoder.encode(`ERROR: ${errorMessage}\n`))
-      await writer.close()
     }
-  }
+  })
 
-  streamJobDescription()
-
-  return new Response(readable, {
+  return new Response(stream, {
     headers: {
       'Content-Type': 'text/plain',
       'Transfer-Encoding': 'chunked',
