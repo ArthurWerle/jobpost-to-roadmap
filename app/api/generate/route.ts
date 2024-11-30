@@ -21,7 +21,7 @@ export async function POST(req: Request): Promise<Response> {
   let fetchError: Error | null = null;
 
   const payload: OpenAIStreamPayload = {
-    model: "gpt-3.5-turbo",
+    model: "gpt-4o-mini",
     messages: [
       {
         role: "system",
