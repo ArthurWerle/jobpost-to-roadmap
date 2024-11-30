@@ -41,8 +41,10 @@ export async function GET(request: NextRequest) {
       const response = await robustFetch(extractedUrl)
       const html = await response.text()
 
+      console.log({ html })
       // Extract job description
       const jobDescription = extractJobDescription(html)
+      console.log({ jobDescription })
 
       // Stream job description
       await writer.write(encoder.encode(`DESCRIPTION: ${jobDescription}\n`))

@@ -27,11 +27,16 @@ export function useJobDescriptionStream(jobUrl: string) {
 
         const messages: string[] = []
         let description = ''
+        let run = true
 
-        while (true) {
+        while (run) {
           const { done, value } = await reader.read()
           
-          if (done) break
+          if (done) {
+            run = false
+            setIsLoading(false)
+            break
+          }
 
           const chunk = decoder.decode(value)
           const lines = chunk.trim().split('\n')
@@ -49,8 +54,6 @@ export function useJobDescriptionStream(jobUrl: string) {
             }
           })
         }
-
-        setIsLoading(false)
       } catch (err) {
         if (err instanceof Error && err.name !== 'AbortError') {
           setError(err.message)
