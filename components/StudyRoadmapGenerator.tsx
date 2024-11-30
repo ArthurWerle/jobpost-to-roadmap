@@ -58,8 +58,6 @@ export default function StudyRoadmapGenerator() {
     setTimeout(() => setIsCopied(false), 2000)
   }
 
-  console.log({ roadmap })
-
   return (
     <div className="space-y-8 max-w-3xl mx-auto">
       <motion.div
