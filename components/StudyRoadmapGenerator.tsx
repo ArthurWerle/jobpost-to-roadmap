@@ -7,12 +7,14 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, LinkIcon, Copy, Check } from 'lucide-react'
-import { generateRoadmap } from '../app/actions/generateRoadmap'
 import { cn } from '@/lib/utils'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import {
+  createParser,
+} from "eventsource-parser"
 
 export default function StudyRoadmapGenerator() {
   const [jobPostUrl, setJobPostUrl] = useState('')
@@ -42,8 +44,53 @@ export default function StudyRoadmapGenerator() {
     setRoadmap('')
 
     try {
-      const result = await generateRoadmap(jobPostUrl, existingKnowledge)
-      setRoadmap(result)
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jobPostUrl,
+          existingKnowledge
+        }),
+      })
+
+      console.log({ response })
+      if (!response.ok) {
+        throw new Error(response.statusText)
+      }
+
+      const data = response.body
+
+      console.log({ data })
+      if (!data) {
+        return
+      }
+
+      const eventParser = (event: any) => {
+        if (event.type === "event") {
+          const data = event.data
+          try {
+            const text = JSON.parse(data).text ?? ""
+            console.log({ text })
+            setRoadmap((prev) => prev + text)
+          } catch (e) {
+            console.error(e)
+          }
+        }
+      }
+  
+      const reader = data.getReader()
+      const decoder = new TextDecoder()
+      const parser = createParser(eventParser)
+      let done = false
+      while (!done) {
+        const { value, done: doneReading } = await reader.read()
+        done = doneReading
+        const chunkValue = decoder.decode(value)
+        console.log({ chunkValue })
+        parser.feed(chunkValue)
+      }
     } catch (error) {
       console.error('Error generating roadmap:', error)
       setError(error instanceof Error ? error.message : 'An unexpected error occurred')
